@@ -20,6 +20,18 @@
 #include "hardware/xosc.h"
 #include "powerSaving.h"
 
+// How long the blue LED is held on after a write, counted in main-loop passes
+// (there is no usable wall clock - see the comment in the main loop). Too low
+// and a write looks like a read; too high and consecutive writes merge into one
+// long blob. Tuned by eye on hardware.
+#define LED_WRITE_HOLD_PASSES   20000u
+
+// Reads are dimmed by lighting the LED on only one pass in 2^N, because a game
+// streams its rom off the card almost continuously - at full brightness the LED
+// just sits solid and stops telling you anything. Writes stay at full duty, so
+// saving stands out against the read shimmer. Lower this if reads get too faint.
+#define LED_READ_DUTY_SHIFT     3u
+
 static u32 sProgramOffset;
 FATFS sFatFs;
 SdCard gSdCard;
@@ -374,13 +386,57 @@ int __time_critical_func(main)()
 
     pwr_initPowerSaving();
 
+    // Blue LED shows SD traffic and tells reads apart from writes.
+    //
+    // Sample the card BEFORE servicing it: SdCard::Update() blocks until the
+    // transfer it picks up has finished (its ReadBusy path spins on __wfi), so
+    // lighting the LED first keeps it on for the real duration of that transfer.
+    //
+    // A single transfer is far too short to see (a 512 byte sector is tens of
+    // microseconds), so what the eye actually reads is duty cycle. Both effects
+    // below are counted in loop passes, not milliseconds: power saving gates the
+    // timer clock (see powerSaving.c), so there is no wall clock here. One pass
+    // is one interrupt, since the loop ends in __wfi.
+    //
+    //   read  - lit on only one pass in 2^LED_READ_DUTY_SHIFT, a dim shimmer.
+    //           Without this the LED sits solid the whole time a game runs,
+    //           because the rom is streamed off the card continuously.
+    //   write - lit on every pass, so eight times the duty of a read: a bright
+    //           blip against that shimmer, plus a short tail afterwards.
+    //
+    // The LED is unconditionally cleared before __wfi. That matters: the loop
+    // only runs when an interrupt wakes it, so anything left lit here stays lit
+    // for as long as the card bus is quiet, and the hold below cannot count down
+    // either. An earlier version kept the tail lit through __wfi to make writes
+    // more obvious and stranded the LED on exactly that way - a game that saves
+    // and then runs from RAM (Pokemon) left it solid blue forever, while one that
+    // keeps streaming (Zelda) cleared it, and in the launcher the tail masked the
+    // read shimmer entirely. Brightness has to come from duty cycle only.
+    static u32 sLedWriteHold = 0;
+    static u32 sLedPass = 0;
+
     while (1)
     {
+        bool sdBusy = !gSdCard.IsReady();
+        if (sdBusy && gSdCard.IsWriting())
+        {
+            sLedWriteHold = LED_WRITE_HOLD_PASSES;
+        }
+        sLedPass++;
+        bool dimTick = (sLedPass & ((1u << LED_READ_DUTY_SHIFT) - 1u)) == 0u;
+        gpio_put(PIN_LED_B, sLedWriteHold != 0 || (sdBusy && dimTick));
+
         gSdCard.Update();
         gSdCard.Update();
     #ifdef ENABLE_R4_MODE
         ntrc_gameR4Update();
     #endif
+
+        if (sLedWriteHold != 0)
+        {
+            sLedWriteHold--;
+        }
+        gpio_put(PIN_LED_B, false);
         __wfi();
     }
 }
