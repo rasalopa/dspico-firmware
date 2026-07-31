@@ -257,6 +257,20 @@ static inline void earlyGpioInit(void)
         usedPins >>= 1;
     }
 #endif
+
+    // Light the board status LEDs. Both are active high (confirmed on hardware).
+    // Set the level before the direction so the pin never glitches, and keep the
+    // 2 mA drive the other outputs here use.
+    gpio_set_drive_strength(PIN_LED_R, GPIO_DRIVE_STRENGTH_2MA);
+    gpio_set_drive_strength(PIN_LED_B, GPIO_DRIVE_STRENGTH_2MA);
+    gpio_disable_pulls(PIN_LED_R);
+    gpio_disable_pulls(PIN_LED_B);
+    // Both start dark: blue is driven by the main loop to show SD traffic, and
+    // red only ever comes on through ledSignalError() to report a fault.
+    gpio_put(PIN_LED_R, false);
+    gpio_put(PIN_LED_B, false);
+    gpio_set_dir(PIN_LED_R, GPIO_OUT);
+    gpio_set_dir(PIN_LED_B, GPIO_OUT);
 }
 
 int __time_critical_func(main)()
