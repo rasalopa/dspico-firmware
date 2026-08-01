@@ -160,11 +160,6 @@ private:
     
     volatile bool _cancelRequested = false;
 
-    /// @brief Consecutive failed blocks on the current transfer. The retry below
-    ///        is unbounded on purpose, so this is what tells a card that is
-    ///        merely marginal apart from one that is never coming back.
-    u32 _consecutiveBlockFailures = 0;
-
     sdio_status_t Cmd0GoIdleState() const;
     sdio_status_t Cmd2AllSendCid(cid_t& cid) const;
     sdio_status_t Cmd3SendRelativeAddr(u32& rca) const;

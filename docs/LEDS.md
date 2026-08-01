@@ -10,7 +10,7 @@ puts them to work.
 | LED | Meaning |
 | --- | --- |
 | **Blue** | SD card traffic. A faint shimmer while the card is being read, a brighter blip when something is written. |
-| **Red** | The firmware is stuck on the SD card and is not coming back. Stays lit until the next boot. |
+| **Red** | The firmware hit an internal error it cannot come back from. Stays lit until the next boot. **It does not detect a failing or loose SD card** - see [the limits](#what-the-leds-do-not-tell-you). |
 
 Read the [limits](#what-the-leds-do-not-tell-you) before relying on either of
 them. They are useful, not authoritative.
@@ -51,28 +51,35 @@ to catch, so brightness carries the information rather than individual blinks:
 - **Writes** are lit on every pass and held far longer, so a save stands out as a
   bright blip against that shimmer.
 
-**Red** is a fault latch. `SdCard` retries a failed block forever, which is the
-right thing for a card that is having a bad moment but means a card that has come
-loose spins in that retry for good, with the DS simply not responding and nothing
-to see. After 64 consecutive failed blocks, or 4096 spins waiting for a card that
-never answers, the red LED comes on and the blue one is turned off and stays off.
-The same happens on the six paths where the firmware's own bookkeeping desyncs and
-it drops into `__breakpoint()`.
+**Red** is a fault latch on exactly six paths, all in
+`src/ntrCardRomGameSd.cpp`: the points where a transfer is started while the
+firmware believes the card is idle and it is not. That is an internal
+inconsistency, and upstream handles it by dropping into `__breakpoint()`, which
+with no debugger attached is a silent hard lock. The LED is latched on just
+before, so that lock has something visible attached to it. Once red is on, blue is
+turned off and stays off, so a burst of traffic cannot paint over it.
 
-Both thresholds are heuristics, not protocol limits. They are set high enough
-that a card having a bad moment is not reported as dead, and low enough that a
-real failure lights up quickly.
+This is a narrow signal on purpose. An earlier version of this branch also tried
+to light red from the retry loops inside `SdCard.cpp`, to cover a card that had
+come loose. Reviewing it before publishing showed that bounding those loops by a
+spin count lights red on a healthy card during a perfectly normal save - the busy
+period after a multi-block write is milliseconds, and any iteration count small
+enough to be useful is tens of microseconds. A fault light that cries wolf on
+every save is worse than one that stays dark, so that part was dropped rather
+than shipped half-right.
 
 ## What the LEDs do not tell you
 
 Being straight about the gaps, because a status light you cannot trust is worse
 than none:
 
-- **Red does not mean your card is broken.** It means the firmware gave up
-  waiting. A bad contact, a card pulled mid-write and a genuinely failing card
-  all look the same from here.
-- **Red does not catch everything.** It covers the SD paths. A hang somewhere
-  else in the firmware still looks like a plain freeze.
+- **Red does not detect a bad SD card, and that is the big one.** If a card comes
+  loose or starts failing, the firmware wedges in an unbounded retry inside
+  `SdCard.cpp` that red does not watch. The DS stops responding and both LEDs stay
+  as they were. This is the most likely real world failure and it is exactly the
+  case this does not cover. Do not read a dark red LED as "the card is fine".
+- **Red covers one specific internal error**, not hangs in general. A hang
+  anywhere else still looks like a plain freeze.
 - **Blue is not a byte counter.** It shows that traffic is happening, not how
   much. Two very different workloads can look alike.
 - **The write blip can lag.** The hold counts main loop passes, and the loop only
@@ -101,8 +108,11 @@ git submodule update --init
 cd pico-sdk && git submodule update --init && cd ..
 
 cp /path/to/default.nds roms/
-# DETECT_CONSOLE_TYPE is enabled by default, so this one is needed too
-cp /path/to/dsimode.nds roms/
+
+# Optional. Only needed for the Wrfuxxed exploit on unmodified DSi/3DS - see step
+# 4 of the official guide. CMakeLists.txt turns DETECT_CONSOLE_TYPE on only when
+# both roms are present, so the build works fine without it.
+# cp /path/to/dsimode.nds roms/
 
 ./compile.sh
 ```
@@ -145,11 +155,9 @@ At the top of `src/led.cpp`:
 - `LED_READ_HOLD_PASSES` (default `2000`) — how long a read keeps the LED alive
   after the last transfer started.
 
-In `src/sd/SdCard.cpp`, `kBlockFailuresBeforeFault` and `kStopSpinsBeforeFault`
-control how patient the firmware is before lighting red.
-
-All of them count main loop passes rather than milliseconds, because power saving
-gates the timer clock and there is no usable wall clock in that loop.
+All three count main loop passes rather than milliseconds, because power saving
+gates the timer clock and there is no usable wall clock in that loop. There is
+nothing to tune for the red LED: it fires on a condition, not a threshold.
 
 ## Disclaimer
 
@@ -160,9 +168,9 @@ gates the timer clock and there is no usable wall clock in that loop.
   I can only speak for the one I have.
 - It drives GPIO27 and GPIO28 as outputs at 2 mA. If your board has anything else
   wired to those pins, do not flash this.
-- The fault detection changes `SdCard.cpp`, which is on the path every SD transfer
-  takes. It only adds a counter and a comparison, but it is not a cosmetic change
-  and you should read the diff before trusting your saves to it.
+- `src/sd/SdCard.h` gains one counter increment in each of the two functions that
+  start a transfer. That is the whole of the change to the SD path, and
+  `SdCard.cpp` itself is untouched.
 - As with the upstream firmware, this is provided as-is under the
   [zlib license](../LICENSE.txt), without warranty of any kind.
 

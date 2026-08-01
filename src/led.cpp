@@ -79,6 +79,15 @@ void ledUpdate(void)
     }
 }
 
+void ledPrepareForSleep(void)
+{
+    if (sFaulted)
+    {
+        return;
+    }
+    gpio_put(PIN_LED_B, false);
+}
+
 void ledSignalError(void)
 {
     if (sFaulted)

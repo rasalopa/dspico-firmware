@@ -31,6 +31,16 @@ void ledInit(void);
 ///        LEDs report the fault and nothing else.
 void ledUpdate(void);
 
+/// @brief Clears the blue LED before the main loop sleeps.
+///
+/// This has to happen every pass. The loop only runs when an interrupt wakes it,
+/// so a level left set here stays set for as long as the card bus is quiet, and
+/// the holds cannot count down either. Leaving it lit through __wfi to make
+/// writes more obvious was tried and stranded the LED solid on hardware: a game
+/// that saved and then ran from RAM left it blue forever. Brightness has to come
+/// from duty cycle alone.
+void ledPrepareForSleep(void);
+
 /// @brief Latches red on and clears blue, to report a fault the firmware cannot
 ///        recover from. Idempotent.
 ///

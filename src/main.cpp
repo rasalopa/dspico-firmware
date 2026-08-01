@@ -384,6 +384,7 @@ int __time_critical_func(main)()
         ntrc_gameR4Update();
     #endif
 
+        ledPrepareForSleep();
         __wfi();
     }
 }
