@@ -4,6 +4,7 @@
 #include "rp2040_sdio.h"
 #include "SdCardInfo.h"
 #include "SdCard.h"
+#include "../led.h"
 
 #define SEQUENTIAL_READ_TIMEOUT_MICROSECONDS    1000000 // 1 second
 
@@ -214,6 +215,15 @@ bool SdCard::TryInitialize()
     return true;
 }
 
+namespace
+{
+    // Both thresholds are heuristics, not protocol limits: high enough that a
+    // card having a bad moment is not reported as dead, low enough that a real
+    // failure lights up in well under a second of spinning.
+    constexpr u32 kBlockFailuresBeforeFault = 64;
+    constexpr u32 kStopSpinsBeforeFault = 4096;
+}
+
 void SdCard::Update()
 {
     while (true)
@@ -357,12 +367,22 @@ void SdCard::StateReadBusy()
         case SDIO_BLOCK_CRC_FAIL:
         case SDIO_BLOCK_TIMEOUT:
         {
+            // Retrying forever is right for a card that is only marginal, but a
+            // card that has come loose never recovers and this loop then spins
+            // for good: the DS simply stops responding and there is nothing to
+            // see. Past the point where "marginal" stops being a plausible
+            // explanation, light the fault LED so the failure is visible.
+            if (++_consecutiveBlockFailures == kBlockFailuresBeforeFault)
+            {
+                ledSignalError();
+            }
             StopSequentialReadWrite();
             _state = State::ReadBegin; // restart from the failed sector
             break;
         }
         case SDIO_BLOCK_OK:
         {
+            _consecutiveBlockFailures = 0;
             _sectorsCompleted++;
             break;
         }
@@ -514,8 +534,25 @@ void SdCard::StopSequentialReadWrite()
     rp2040_sdio_stop();
     if (_doStopTransmission)
     {
-        while (Cmd12StopTransmission() != SDIO_OK);
-        while (IsCardBusy());
+        // Both of these are unbounded waits on a card that may never answer
+        // again. Same reasoning as the block retry above: keep waiting, but stop
+        // doing it silently.
+        u32 spins = 0;
+        while (Cmd12StopTransmission() != SDIO_OK)
+        {
+            if (++spins == kStopSpinsBeforeFault)
+            {
+                ledSignalError();
+            }
+        }
+        spins = 0;
+        while (IsCardBusy())
+        {
+            if (++spins == kStopSpinsBeforeFault)
+            {
+                ledSignalError();
+            }
+        }
     }
     _sequentialState = SequentialState::None;
     _stopSequentialRead = false;

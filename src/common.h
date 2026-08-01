@@ -54,20 +54,9 @@ typedef volatile int64_t vs64;
 
 // Board status LEDs (see the pinout in the dspico-hardware repo). The stock
 // firmware never drives these, so they stay dark. Both are active high.
-//
-// Blue shows SD traffic (driven by the main loop), red stays dark until the
-// firmware hits a fault, so a lit red LED always means something went wrong.
+// Everything that drives them lives in led.h.
 #define PIN_LED_R       27
 #define PIN_LED_B       28
-
-/// @brief Latches the red LED on to report a fault. Safe from any context,
-///        including an interrupt: gpio_put is a single store to sio_hw->gpio_set,
-///        so it cannot race with the blue writes in the main loop. Nothing ever
-///        turns it back off - a fault should stay visible until the next boot.
-static inline void ledSignalError(void)
-{
-    gpio_put(PIN_LED_R, true);
-}
 
 #define PIN_DEV_TX0     0
 #define PIN_DEV_RX0     1

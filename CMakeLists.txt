@@ -15,6 +15,7 @@ add_compile_definitions(DSpico
 
 add_executable(DSpico
   src/main.cpp
+  src/led.cpp
   src/common.h
   src/romData.S
   src/romData.h

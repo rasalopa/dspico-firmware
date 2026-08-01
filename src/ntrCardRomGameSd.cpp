@@ -1,4 +1,5 @@
 #include "common.h"
+#include "led.h"
 #include <stdio.h>
 #include "r4.h"
 #include "ntrCardRom.h"
