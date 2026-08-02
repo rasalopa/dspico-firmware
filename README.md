@@ -5,7 +5,7 @@
 > It is a fork of [LNH-team/dspico-firmware](https://github.com/LNH-team/dspico-firmware)
 > that lights up the two board LEDs the stock firmware leaves dark: blue for SD
 > card traffic, red to make an otherwise invisible firmware lockup visible. See
-> [docs/LEDS.md](docs/LEDS.md) on the `leds` branch. Problems with this build are
+> [docs/LEDS.md](docs/LEDS.md). Problems with this build are
 > mine, not the LNH team's, so please report them here rather than upstream.
 
 This is the repository for the DSpico firmware. The firmware emulates a DS cartridge, with extended features for SD access and USB. PIO is used for an SDIO interface for the SD card and for interfacing the DS cartridge bus.
