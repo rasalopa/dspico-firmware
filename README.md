@@ -116,6 +116,12 @@ To compile and properly use the firmware, you will need to place a valid DS rom 
 </table>
 
 ## Compiling
+
+> [!NOTE]
+> `./compile.sh` alone is not enough from a fresh clone: `roms/default.nds` is
+> gitignored and has to be produced first. See
+> [docs/LEDS.md](docs/LEDS.md#building) for the full sequence.
+
 Simply run `./compile.sh` to compile the firmware. Once it is complete, you will be able to find `DSpico.uf2` in the `build/` folder, which you can use to flash your DSpico board with.
 
 > [!IMPORTANT]
