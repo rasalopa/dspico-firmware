@@ -147,12 +147,12 @@ the firmware working, so a bad build cannot leave you stranded.
 
 At the top of `src/led.cpp`:
 
-- `LED_READ_DUTY_SHIFT` (default `3`, one pass in 2^3) — lower it if the read
+- `LED_READ_DUTY_SHIFT` (default `3`, one pass in 2^3): lower it if the read
   shimmer is too faint on your board.
-- `LED_WRITE_HOLD_PASSES` (default `20000`) — how long the write blip is held.
+- `LED_WRITE_HOLD_PASSES` (default `20000`): how long the write blip is held.
   Too low and a write looks like a read, too high and consecutive writes merge
   into one blob.
-- `LED_READ_HOLD_PASSES` (default `2000`) — how long a read keeps the LED alive
+- `LED_READ_HOLD_PASSES` (default `2000`): how long a read keeps the LED alive
   after the last transfer started.
 
 All three count main loop passes rather than milliseconds, because power saving
