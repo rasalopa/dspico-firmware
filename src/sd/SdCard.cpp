@@ -1,4 +1,5 @@
 #include "../common.h"
+#include "../led.h"
 #include "pico/multicore.h"
 #include "hardware/clocks.h"
 #include "rp2040_sdio.h"
@@ -268,6 +269,10 @@ void SdCard::Update()
 
 void SdCard::StateReadBegin()
 {
+    // Every read reaches this state, the r4 and FatFs ones included, so this is
+    // the one place that sees all of them.
+    ledNotifySdRead();
+
     u32 sectorsLeft = _sectorCount - _sectorsCompleted;
     u32 startSector = _sectorAddress + _sectorsCompleted;
     if (startSector > _lastSdSector)
@@ -393,6 +398,8 @@ void SdCard::StateReadWriteCancel()
 
 void SdCard::StateWriteBegin()
 {
+    ledNotifySdWrite();
+
     _writeOffset = _sectorsCompleted;
     u32 sectorsLeft = _sectorCount - _sectorsCompleted;
     u32 startSector = _sectorAddress + _sectorsCompleted;

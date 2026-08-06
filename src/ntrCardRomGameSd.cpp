@@ -1,4 +1,5 @@
 #include "common.h"
+#include "led.h"
 #include <stdio.h>
 #include "r4.h"
 #include "ntrCardRom.h"
@@ -27,6 +28,7 @@ extern "C" void __scratch_y("cpu0") ntrc_gameReqSdReadCmd1(ntr_rom_emu_t* romEmu
         sBufferIndex = 0;
         if (!gSdCard.TryBeginReadSectors(&sSdSectorBuf[0], sReadSector, 1))
         {
+            ledSignalError();
             __breakpoint();
         }
         sReadBusy = true;
@@ -72,6 +74,7 @@ extern "C" void __scratch_y("cpu0") ntrc_gameGetSdStatCmd0(ntr_rom_emu_t* romEmu
     {
         if (!gSdCard.TryBeginWriteSectors(&sSdSectorBuf[sBufferIndex * 512], sNextWriteSector, 1, !sNextWriteIsLast))
         {
+            ledSignalError();
             __breakpoint();
         }
 
@@ -95,6 +98,7 @@ extern "C" void __scratch_y("cpu0") ntrc_gameGetSdDataCmd0(ntr_rom_emu_t* romEmu
     {
         if (!gSdCard.TryBeginReadSectors(&sSdSectorBuf[sBufferIndex * 512], sReadSector, 1))
         {
+            ledSignalError();
             __breakpoint();
         }
         sReadBusy = true;
@@ -133,6 +137,7 @@ static void __scratch_y("cpu0") sdWritePayloadComplete(ntr_rom_emu_t* romEmu)
     {
         if (!gSdCard.TryBeginWriteSectors(sSdSectorBuf, romEmu->cmd1, 1, !isLast))
         {
+            ledSignalError();
             __breakpoint();
         }
         sWriteBusy = true;
@@ -187,6 +192,7 @@ extern "C" void __scratch_y("cpu0") ntrc_gameR4StartSdReadCmd0(ntr_rom_emu_t* ro
         {
             if (!gSdCard.TryBeginReadSectors(sSdSectorBuf, sector, 1))
             {
+                ledSignalError();
                 __breakpoint();
             }
             sCurSdSector = sector;
@@ -221,6 +227,7 @@ static void __scratch_y("cpu0") r4SdWritePayloadComplete(ntr_rom_emu_t* romEmu)
 {
     if (__builtin_expect(!gSdCard.TryBeginWriteSectors(sSdSectorBuf, (romEmu->cmd0 << 8) >> 9, 1, false), false))
     {
+        ledSignalError();
         __breakpoint();
     }
 }

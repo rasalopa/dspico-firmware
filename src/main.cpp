@@ -19,6 +19,7 @@
 #include "pico/bootrom.h"
 #include "hardware/xosc.h"
 #include "powerSaving.h"
+#include "led.h"
 
 static u32 sProgramOffset;
 FATFS sFatFs;
@@ -257,6 +258,8 @@ static inline void earlyGpioInit(void)
         usedPins >>= 1;
     }
 #endif
+
+    ledInit();
 }
 
 int __time_critical_func(main)()
@@ -268,6 +271,10 @@ int __time_critical_func(main)()
     bi_decl(bi_1pin_with_name(PIN_WREB, "Ntr card wreb (clock)"));
     bi_decl(bi_1pin_with_name(PIN_RST, "Ntr card reset"));
     bi_decl(bi_1pin_with_name(PIN_CS2, "Ntr card cs2 (spi enable)"));
+#ifdef ENABLE_STATUS_LEDS
+    bi_decl(bi_1pin_with_name(PIN_LED_R, "Status led red (fault)"));
+    bi_decl(bi_1pin_with_name(PIN_LED_B, "Status led blue (sd activity)"));
+#endif
 
     // u64 bootTime = time_us_64();
 
@@ -360,13 +367,20 @@ int __time_critical_func(main)()
 
     pwr_initPowerSaving();
 
+    // The blue LED runs off counters that SdCard bumps when a transfer starts,
+    // not off the card state sampled here: an r4 rom read or a FatFs write both
+    // begin and finish inside one pass, so a sample here would never see them.
     while (1)
     {
+        ledUpdate();
+
         gSdCard.Update();
         gSdCard.Update();
     #ifdef ENABLE_R4_MODE
         ntrc_gameR4Update();
     #endif
+
+        ledPrepareForSleep();
         __wfi();
     }
 }
