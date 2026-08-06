@@ -4,6 +4,8 @@
 // Deliberately does NOT include common.h: that pulls in SdCard.h, which includes
 // this header back, and the notify helpers would then be used before declaration.
 
+#ifdef ENABLE_STATUS_LEDS
+
 // Bumped once every time an SD transfer is started, from BOTH the interrupt
 // driven path and the blocking one (see SdCard::TryBegin*Sectors). Counting at
 // the source is what makes the blocking path visible at all: an r4 mode rom read
@@ -49,3 +51,18 @@ void ledPrepareForSleep(void);
 /// RAM resident time critical section for no benefit: this path is terminal, so
 /// the cost of a call into flash does not matter here.
 void ledSignalError(void);
+
+#else
+
+// Every call site stays as it is and compiles to nothing. Guarding the eleven
+// call sites individually would bury them in #ifdef, and the point of the flag is
+// that a build without it behaves exactly as it did before - see the note in
+// CMakeLists.txt.
+static inline void ledNotifySdRead(void) { }
+static inline void ledNotifySdWrite(void) { }
+static inline void ledInit(void) { }
+static inline void ledUpdate(void) { }
+static inline void ledPrepareForSleep(void) { }
+static inline void ledSignalError(void) { }
+
+#endif

@@ -1,3 +1,5 @@
+#ifdef ENABLE_STATUS_LEDS
+
 #include "common.h"
 #include "led.h"
 #include "hardware/gpio.h"
@@ -100,3 +102,5 @@ void ledSignalError(void)
     gpio_put(PIN_LED_B, false);
     gpio_put(PIN_LED_R, true);
 }
+
+#endif // ENABLE_STATUS_LEDS

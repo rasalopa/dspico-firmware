@@ -264,12 +264,15 @@ static inline void earlyGpioInit(void)
 
 int __time_critical_func(main)()
 {
-    // Marked as an altered build on purpose: the uf2 is named the same as the
-    // official one, so this is what tells the two apart once it is flashed
-    // (picotool info) or when someone finds a stray file months later.
-    bi_decl(bi_program_description("Ntr card emulator (altered build: board status LEDs)"));
+#ifdef ENABLE_STATUS_LEDS
+    // Names the build and its pins, so a flashed board and a stray uf2 can both be
+    // identified with picotool rather than only by the docs.
+    bi_decl(bi_program_description("Ntr card emulator (board status LEDs)"));
     bi_decl(bi_1pin_with_name(PIN_LED_R, "Status led red (fault)"));
     bi_decl(bi_1pin_with_name(PIN_LED_B, "Status led blue (sd activity)"));
+#else
+    bi_decl(bi_program_description("Ntr card emulator"));
+#endif
     bi_decl(bi_pin_mask_with_name(0xFF000, "Ntr card D0-D7"));
     bi_decl(bi_1pin_with_name(PIN_IRQ, "Ntr card irq"));
     bi_decl(bi_1pin_with_name(PIN_CEB, "Ntr card ceb (rom enable)"));
