@@ -109,16 +109,39 @@ cd pico-sdk && git submodule update --init && cd ..
 
 cp /path/to/default.nds roms/
 
-# Optional. Only needed for the Wrfuxxed exploit on unmodified DSi/3DS - see step
-# 4 of the official guide. CMakeLists.txt turns DETECT_CONSOLE_TYPE on only when
-# both roms are present, so the build works fine without it.
-# cp /path/to/dsimode.nds roms/
+# Read the note below before skipping these two: without them the cart stops
+# booting on an unmodified DSi or 3DS.
+cp /path/to/WRFUTester_v0.60.nds roms/dsimode.nds
+cp /path/to/uartBufv060.bin data/
 
 ./compile.sh
 ```
 
 The result is `build/DSpico.uf2`. If `compile.sh` complains about permissions,
 run `chmod +x compile.sh` and retry.
+
+> [!IMPORTANT]
+> **If you use the cart on a DSi or a 3DS without CFW, you need the two extra
+> files.** The stock firmware ships them, so a build made from `default.nds`
+> alone is a downgrade for those consoles: they refuse the homebrew bootloader
+> and show a Nintendo error, while a DS and a CFW console keep working and hide
+> the problem. This bit me on my own New 3DS.
+>
+> The two files come from step 4 of the
+> [official guide](https://github.com/LNH-team/dspico/blob/develop/GUIDE.md):
+> `roms/dsimode.nds` is the WRFU Tester v0.60 rom (sha1
+> `2d65fb7a0c62a4f08954b98c95f42b804fccfd26`) and `data/uartBufv060.bin` is the
+> [Wrfuxxed](https://github.com/LNH-team/dspico-wrfuxxed) payload built with
+> BlocksDS and then DLDI patched with the
+> [DSpico DLDI](https://github.com/LNH-team/dspico-dldi):
+>
+> ```sh
+> dlditool /path/to/DSpico.dldi uartBufv060.bin
+> ```
+>
+> `CMakeLists.txt` picks both up on its own: `DETECT_CONSOLE_TYPE` turns on when
+> both roms are present and `DSPICO_ENABLE_WRFUXXED` when the payload is in
+> `data/`. Nothing to edit, and a build without them still compiles.
 
 To confirm you built this version and not the stock one:
 
