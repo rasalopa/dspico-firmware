@@ -10,7 +10,7 @@ puts them to work.
 | LED | Meaning |
 | --- | --- |
 | **Blue** | SD card traffic. A faint shimmer while the card is being read, a brighter blip when something is written. |
-| **Red** | The firmware hit an internal error it cannot come back from. Stays lit until the next boot. **It does not detect a failing or loose SD card** - see [the limits](#what-the-leds-do-not-tell-you). |
+| **Red** | The firmware stopped on a fault it cannot come back from. Stays lit until the next boot. **It does not detect a failing or loose SD card** - see [the limits](#what-the-leds-do-not-tell-you). |
 
 Read the [limits](#what-the-leds-do-not-tell-you) before relying on either of
 them. They are useful, not authoritative.
@@ -51,13 +51,37 @@ to catch, so brightness carries the information rather than individual blinks:
 - **Writes** are lit on every pass and held far longer, so a save stands out as a
   bright blip against that shimmer.
 
-**Red** is a fault latch on exactly six paths, all in
-`src/ntrCardRomGameSd.cpp`: the points where a transfer is started while the
-firmware believes the card is idle and it is not. That is an internal
-inconsistency, and upstream handles it by dropping into `__breakpoint()`, which
-with no debugger attached is a silent hard lock. The LED is latched on just
-before, so that lock has something visible attached to it. Once red is on, blue is
-turned off and stays off, so a burst of traffic cannot paint over it.
+**Red** is lit by the HardFault handler. Upstream handles the six internal
+inconsistencies in `src/ntrCardRomGameSd.cpp` - a transfer started while the
+firmware believes the card is idle and it is not - by dropping into
+`__breakpoint()`, which with no debugger attached escalates to a HardFault and a
+silent hard lock. This build replaces the SDK's default handler with one that
+turns blue off, turns red on and parks the core, so that lock has something
+visible attached to it, and so does any other fault that ends up there.
+
+Why the handler and not a call on those six paths, which is what an earlier
+version of this branch did: the card command handlers live in SCRATCH_Y, the same
+4 KB bank the core 0 stack grows down into, with only a few hundred bytes to
+spare - upstream's linker layout does not guard that boundary. A call from those
+handlers into flash needs a long-branch veneer in that bank, and the veneers sit
+at its very top, right under the stack. The LED version that called from there
+grew the bank by 120 bytes, a quarter of that margin. Whether that alone broke
+anything was not isolated on hardware; it is kept out because the margin is not
+this feature's to spend. This build adds no bytes to SCRATCH_Y: the SD counters
+live in `SdCard.cpp`'s state machine, which is in flash, and red is lit from the
+fault handler.
+
+### What broke the USB examples
+
+With the first builds of this branch, the DS side USB examples
+([dspico-usb-examples](https://github.com/LNH-team/dspico-usb-examples)) never
+showed up on the PC, while the stock firmware works. Bisected on hardware, one
+change at a time: the same build with `ledUpdate` and `ledPrepareForSleep`
+removed from the main loop enumerates, and so does the build with those two
+placed in RAM (`__time_critical_func`), which is what this branch does now. The
+build that ran them from flash every pass, while the DS polls the cartridge for
+USB events, is the one that never enumerated. The exact mechanism is not pinned
+down and the code says so.
 
 This is a narrow signal on purpose. An earlier version of this branch also tried
 to light red from the retry loops inside `SdCard.cpp`, to cover a card that had
@@ -78,8 +102,8 @@ than none:
   `SdCard.cpp` that red does not watch. The DS stops responding and both LEDs stay
   as they were. This is the most likely real world failure and it is exactly the
   case this does not cover. Do not read a dark red LED as "the card is fine".
-- **Red covers one specific internal error**, not hangs in general. A hang
-  anywhere else still looks like a plain freeze.
+- **Red covers faults, not hangs.** Anything that ends in a HardFault lights it;
+  a loop that never returns, such as the retry above, looks like a plain freeze.
 - **Blue is not a byte counter.** It shows that traffic is happening, not how
   much. Two very different workloads can look alike.
 - **The write blip can lag.** The hold counts main loop passes, and the loop only

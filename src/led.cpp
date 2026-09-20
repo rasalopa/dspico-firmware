@@ -3,6 +3,8 @@
 #include "common.h"
 #include "led.h"
 #include "hardware/gpio.h"
+#include "hardware/structs/sio.h"
+#include "pico/platform.h"
 
 // How long the blue LED is held on after a write, counted in main loop passes.
 // There is no usable wall clock here: power saving gates the timer clock, so
@@ -29,7 +31,6 @@ static u32 sSeenWriteEvents = 0;
 static u32 sReadHold = 0;
 static u32 sWriteHold = 0;
 static u32 sPass = 0;
-static bool sFaulted = false;
 
 void ledInit(void)
 {
@@ -45,15 +46,19 @@ void ledInit(void)
     gpio_set_dir(PIN_LED_B, GPIO_OUT);
 }
 
-void ledUpdate(void)
+// ledUpdate and ledPrepareForSleep run once per main loop pass, called from
+// main, which is itself RAM resident (__time_critical_func). They are put in RAM
+// too, and that is not a nicety: with them in flash the DSpico's USB device
+// never enumerated on the host. The DS side of the usb examples polls the
+// cartridge for USB events as fast as it can, so the main loop is woken and run
+// at that rate, and every pass then fetched these two from flash through a
+// veneer - the same flash the card handlers and the rom data compete for. This
+// was bisected on hardware: the same build with the two calls removed
+// enumerates, the build with the two in RAM enumerates, the build with them in
+// flash does not. Why a few flash fetches per pass are enough to stop USB is not
+// pinned down; what is known is that this build must not make them.
+void __time_critical_func(ledUpdate)(void)
 {
-    // A latched fault owns both LEDs from here on, so a burst of card traffic
-    // cannot paint over the one signal that matters.
-    if (sFaulted)
-    {
-        return;
-    }
-
     uint32_t reads = gLedSdReadEvents;
     uint32_t writes = gLedSdWriteEvents;
     if (writes != sSeenWriteEvents)
@@ -81,26 +86,29 @@ void ledUpdate(void)
     }
 }
 
-void ledPrepareForSleep(void)
+void __time_critical_func(ledPrepareForSleep)(void)
 {
-    if (sFaulted)
-    {
-        return;
-    }
     gpio_put(PIN_LED_B, false);
 }
 
-void ledSignalError(void)
+// Replaces the SDK's default HardFault handler, which parks the core on a
+// breakpoint. Every fault the firmware cannot come back from ends here: the
+// terminal paths in the card handlers hit __breakpoint(), which with no
+// debugger attached escalates to a HardFault, and so does anything else that
+// goes wrong at that level. Lighting red from here rather than from those six
+// paths keeps every byte of this feature out of the __scratch_y handlers (see
+// led.h for why that margin matters), and covers faults the six paths never
+// would have. Blue off first: a fault taken while it happened to be lit would
+// otherwise strand it on next to the red one and muddle the signal. Direct SIO
+// writes, because the gpio functions live in flash and may be what faulted.
+extern "C" void isr_hardfault(void)
 {
-    if (sFaulted)
+    sio_hw->gpio_clr = 1u << PIN_LED_B;
+    sio_hw->gpio_oe_set = 1u << PIN_LED_R;
+    sio_hw->gpio_set = 1u << PIN_LED_R;
+    while (true)
     {
-        return;
     }
-    sFaulted = true;
-    // Blue off first: a fault taken while it happened to be lit would otherwise
-    // strand it on next to the red one and muddle the signal.
-    gpio_put(PIN_LED_B, false);
-    gpio_put(PIN_LED_R, true);
 }
 
 #endif // ENABLE_STATUS_LEDS

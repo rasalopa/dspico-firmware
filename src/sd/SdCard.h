@@ -1,7 +1,6 @@
 #pragma once
 #include "rp2040_sdio.h"
 #include "SdCardInfo.h"
-#include "../led.h"
 
 class SdCard
 {
@@ -36,10 +35,6 @@ public:
         _sectorsCompleted = 0;
         _cancelRequested = false;
         _state = State::ReadBegin;
-        // Every read in the firmware starts here, the interrupt driven ones and
-        // the blocking ones alike, so this is the one place the LED can see all
-        // of them (see led.h).
-        ledNotifySdRead();
         return true;
     }
 
@@ -65,9 +60,6 @@ public:
         _cancelRequested = false;
         _keepSequentialWriteOpen = keepSequentialWriteOpen;
         _state = State::WriteBegin;
-        // See TryBeginReadSectors: notifying here is what makes a write that
-        // begins and completes inside one main loop pass visible at all.
-        ledNotifySdWrite();
         return true;
     }
 

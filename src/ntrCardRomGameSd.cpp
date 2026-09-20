@@ -1,5 +1,4 @@
 #include "common.h"
-#include "led.h"
 #include <stdio.h>
 #include "r4.h"
 #include "ntrCardRom.h"
@@ -28,9 +27,6 @@ extern "C" void __scratch_y("cpu0") ntrc_gameReqSdReadCmd1(ntr_rom_emu_t* romEmu
         sBufferIndex = 0;
         if (!gSdCard.TryBeginReadSectors(&sSdSectorBuf[0], sReadSector, 1))
         {
-            // this path is terminal - the core locks up here with no debugger
-            // attached, so latch the red LED first to leave a visible trace
-            ledSignalError();
             __breakpoint();
         }
         sReadBusy = true;
@@ -76,9 +72,6 @@ extern "C" void __scratch_y("cpu0") ntrc_gameGetSdStatCmd0(ntr_rom_emu_t* romEmu
     {
         if (!gSdCard.TryBeginWriteSectors(&sSdSectorBuf[sBufferIndex * 512], sNextWriteSector, 1, !sNextWriteIsLast))
         {
-            // this path is terminal - the core locks up here with no debugger
-            // attached, so latch the red LED first to leave a visible trace
-            ledSignalError();
             __breakpoint();
         }
 
@@ -102,9 +95,6 @@ extern "C" void __scratch_y("cpu0") ntrc_gameGetSdDataCmd0(ntr_rom_emu_t* romEmu
     {
         if (!gSdCard.TryBeginReadSectors(&sSdSectorBuf[sBufferIndex * 512], sReadSector, 1))
         {
-            // this path is terminal - the core locks up here with no debugger
-            // attached, so latch the red LED first to leave a visible trace
-            ledSignalError();
             __breakpoint();
         }
         sReadBusy = true;
@@ -143,9 +133,6 @@ static void __scratch_y("cpu0") sdWritePayloadComplete(ntr_rom_emu_t* romEmu)
     {
         if (!gSdCard.TryBeginWriteSectors(sSdSectorBuf, romEmu->cmd1, 1, !isLast))
         {
-            // this path is terminal - the core locks up here with no debugger
-            // attached, so latch the red LED first to leave a visible trace
-            ledSignalError();
             __breakpoint();
         }
         sWriteBusy = true;
@@ -200,9 +187,6 @@ extern "C" void __scratch_y("cpu0") ntrc_gameR4StartSdReadCmd0(ntr_rom_emu_t* ro
         {
             if (!gSdCard.TryBeginReadSectors(sSdSectorBuf, sector, 1))
             {
-                // this path is terminal - the core locks up here with no debugger
-                // attached, so latch the red LED first to leave a visible trace
-                ledSignalError();
                 __breakpoint();
             }
             sCurSdSector = sector;
@@ -237,9 +221,6 @@ static void __scratch_y("cpu0") r4SdWritePayloadComplete(ntr_rom_emu_t* romEmu)
 {
     if (__builtin_expect(!gSdCard.TryBeginWriteSectors(sSdSectorBuf, (romEmu->cmd0 << 8) >> 9, 1, false), false))
     {
-        // this path is terminal - the core locks up here with no debugger
-        // attached, so latch the red LED first to leave a visible trace
-        ledSignalError();
         __breakpoint();
     }
 }
