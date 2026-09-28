@@ -109,6 +109,13 @@ than none:
 - **The write blip can lag.** The hold counts main loop passes, and the loop only
   runs when an interrupt wakes it. After a save, a long idle gap followed by
   fresh activity can show the tail of that old write.
+- **Blue flickers when the cart is handled outside a console.** On USB power
+  with no console in the slot, the cart bus lines are left floating (the upstream
+  init disables their pulls), so a finger near the contacts puts edges on them
+  that the firmware decodes as commands and answers with SD reads, and blue shows
+  those reads. Nothing on the bus side changes in this branch, so the stock
+  firmware goes through the same path; it just has no LED to show it. Inside a
+  console the bus is driven and this does not happen.
 
 If you see red, please open an issue and say what you were doing. That is the
 whole point of it existing.
@@ -210,14 +217,14 @@ nothing to tune for the red LED: it fires on a condition, not a threshold.
 
 - **This is not official DSpico firmware.** Do not report problems with it to the
   LNH team. Open an issue on this fork instead.
-- It has been tested on **one board, mine**. The pinout it relies on is documented
-  by the LNH team and I have no reason to expect differences between boards, but
-  I can only speak for the one I have.
+- It has been tested on **four boards**: mine, on a DS Lite, a 3DS with CFW and a
+  New 3DS without, and three more from people who tried the build. The pinout it
+  relies on is documented by the LNH team.
 - It drives GPIO27 and GPIO28 as outputs at 2 mA. If your board has anything else
   wired to those pins, do not flash this.
-- `src/sd/SdCard.h` gains one counter increment in each of the two functions that
-  start a transfer. That is the whole of the change to the SD path, and
-  `SdCard.cpp` itself is untouched.
+- `src/sd/SdCard.cpp` gains one counter increment in each of the two functions
+  that start a transfer, and the include that declares them. That is the whole of
+  the change to the SD path; `SdCard.h` is untouched.
 - As with the upstream firmware, this is provided as-is under the
   [zlib license](../LICENSE.txt), without warranty of any kind.
 
