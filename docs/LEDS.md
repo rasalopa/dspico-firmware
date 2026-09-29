@@ -31,10 +31,11 @@ were already there and already wired to LEDs.
 
 ## How it works
 
-`SdCard::TryBeginReadSectors` and `TryBeginWriteSectors` bump a counter
-(`src/led.h`). Every transfer in the firmware goes through one of those two
-functions, so the counters see all of them. `ledUpdate()` in `src/led.cpp` turns
-those counters into a pin state, once per main loop pass.
+`SdCard`'s state machine bumps a counter (`src/led.h`) where it starts each read
+and each write (`StateReadBegin` and `StateWriteBegin` in `src/sd/SdCard.cpp`).
+Every transfer in the firmware passes through one of those two, so the counters
+see all of them. `ledUpdate()` in `src/led.cpp` turns those counters into a pin
+state, once per main loop pass.
 
 Counting at the source rather than sampling the card state matters more than it
 sounds. R4 mode, which is enabled by default, streams roms and writes saves
@@ -178,7 +179,7 @@ To confirm you built this version and not the stock one:
 
 ```sh
 picotool info build/DSpico.uf2
-# description: Ntr card emulator (altered build: board status LEDs)
+# description: Ntr card emulator (board status LEDs)
 ```
 
 ## Flashing
@@ -237,9 +238,10 @@ nothing to tune for the red LED: it fires on a condition, not a threshold.
 
 ## History
 
-Written 31 July 2026, published 1 August 2026. The `leds` branch is, in order:
-claim the pins, red fault latch, blue activity, then this documentation and the
-fixes that came out of reviewing all of it before publishing.
+Written 31 July 2026, published 1 August 2026. At publication the `leds` branch
+was, in order: claim the pins, red fault latch, blue activity, then this
+documentation and the fixes that came out of reviewing all of it before
+publishing.
 
 28 September 2026: the boot mount no longer lights blue. An earlier version of
 this page said the flicker outside a console was SD reads started by noise on
