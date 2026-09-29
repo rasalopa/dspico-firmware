@@ -36,6 +36,10 @@ static inline void ledNotifySdWrite(void) { gLedSdWriteEvents++; }
 /// @brief Claims the two LED pins and parks both dark.
 void ledInit(void);
 
+/// @brief Takes the transfers counted so far as seen, so only the ones that
+///        start after this call light the LED. Call once, after the boot mount.
+void ledStart(void);
+
 /// @brief Drives the blue LED from the counters above. Call once per main loop
 ///        pass. RAM resident, and it has to be - see led.cpp.
 void ledUpdate(void);
@@ -63,6 +67,7 @@ void ledPrepareForSleep(void);
 static inline void ledNotifySdRead(void) { }
 static inline void ledNotifySdWrite(void) { }
 static inline void ledInit(void) { }
+static inline void ledStart(void) { }
 static inline void ledUpdate(void) { }
 static inline void ledPrepareForSleep(void) { }
 

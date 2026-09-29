@@ -371,6 +371,9 @@ int __time_critical_func(main)()
 
     pwr_initPowerSaving();
 
+    // Only transfers from here on light the LED, see ledStart.
+    ledStart();
+
     // The blue LED is driven from led.cpp, off counters that SdCard bumps when a
     // transfer starts. It is deliberately NOT sampled from the card state here:
     // the blocking path (r4 rom reads, FatFs writes) begins and completes inside

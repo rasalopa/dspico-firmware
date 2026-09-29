@@ -51,6 +51,13 @@ to catch, so brightness carries the information rather than individual blinks:
 - **Writes** are lit on every pass and held far longer, so a save stands out as a
   bright blip against that shimmer.
 
+The reads the firmware makes on its own at power-on, to mount the card, do not
+light the LED: `ledStart()` marks them as seen just before the main loop starts.
+They used to arm the read hold on the first pass, and the hold then sat there
+until wake-ups spent it. Outside a console the only thing that wakes the loop is
+a finger on the floating bus pins, so blue lit with no transfer at all, stayed lit
+while the finger was there, and went dark for good once the hold ran out.
+
 **Red** is lit by the HardFault handler. Upstream handles the six internal
 inconsistencies in `src/ntrCardRomGameSd.cpp` - a transfer started while the
 firmware believes the card is idle and it is not - by dropping into
@@ -109,13 +116,6 @@ than none:
 - **The write blip can lag.** The hold counts main loop passes, and the loop only
   runs when an interrupt wakes it. After a save, a long idle gap followed by
   fresh activity can show the tail of that old write.
-- **Blue flickers when the cart is handled outside a console.** On USB power
-  with no console in the slot, the cart bus lines are left floating (the upstream
-  init disables their pulls), so a finger near the contacts puts edges on them
-  that the firmware decodes as commands and answers with SD reads, and blue shows
-  those reads. Nothing on the bus side changes in this branch, so the stock
-  firmware goes through the same path; it just has no LED to show it. Inside a
-  console the bus is driven and this does not happen.
 
 If you see red, please open an issue and say what you were doing. That is the
 whole point of it existing.
@@ -233,3 +233,8 @@ nothing to tune for the red LED: it fires on a condition, not a threshold.
 Written 31 July 2026, published 1 August 2026. The `leds` branch is, in order:
 claim the pins, red fault latch, blue activity, then this documentation and the
 fixes that came out of reviewing all of it before publishing.
+
+28 September 2026: the boot mount no longer lights blue. An earlier version of
+this page said the flicker outside a console was SD reads started by noise on
+the bus; a build that only leaves the boot mount out stays dark under the same
+finger, so it was the LED's own hold and not the card.

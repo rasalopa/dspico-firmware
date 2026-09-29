@@ -46,6 +46,16 @@ void ledInit(void)
     gpio_set_dir(PIN_LED_B, GPIO_OUT);
 }
 
+// The boot mount reads the card before the main loop starts. Counted, those reads
+// would arm the read hold on the first pass, and the hold would then wait for
+// wake-ups to spend it. Outside a console the only wake-ups come from a finger on
+// the floating bus pins, so the LED would light with no transfer at all.
+void ledStart(void)
+{
+    sSeenReadEvents = gLedSdReadEvents;
+    sSeenWriteEvents = gLedSdWriteEvents;
+}
+
 // ledUpdate and ledPrepareForSleep run once per main loop pass, called from
 // main, which is itself RAM resident (__time_critical_func). They are put in RAM
 // too, and that is not a nicety: with them in flash the DSpico's USB device
