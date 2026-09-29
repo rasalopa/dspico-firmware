@@ -210,7 +210,9 @@ static inline void earlyGpioInit(void)
 #endif
 
     gpio_disable_pulls(PIN_RST);
-    gpio_disable_pulls(PIN_CEB);
+    // CEB and CS2 are active low selects that rest high. Pulled up, they stay
+    // deselected when nothing drives them, as on USB power outside a console.
+    gpio_pull_up(PIN_CEB);
     gpio_disable_pulls(PIN_WREB);
     gpio_disable_pulls(PIN_D0);
     gpio_disable_pulls(PIN_D1);
@@ -220,7 +222,7 @@ static inline void earlyGpioInit(void)
     gpio_disable_pulls(PIN_D5);
     gpio_disable_pulls(PIN_D6);
     gpio_disable_pulls(PIN_D7);
-    gpio_disable_pulls(PIN_CS2);
+    gpio_pull_up(PIN_CS2);
 
     // Set SDIO and NTRCARD DAT pin slew rate.
     // Default slew rate after reset is slow. Good enough for 25 MHz.

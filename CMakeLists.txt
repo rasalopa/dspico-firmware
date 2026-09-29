@@ -9,7 +9,7 @@ add_compile_definitions(DSpico
   PICO_STACK_SIZE=0x600
   PICO_CORE1_STACK_SIZE=0x400
   ENABLE_R4_MODE
-  ENABLE_STATUS_LEDS # This macro drives the two board LEDs: blue for SD activity, red on a fault. On by default here, the leds are the point of this fork. Comment it out for a build that behaves like upstream.
+  ENABLE_STATUS_LEDS # This macro drives the two board LEDs: blue for SD activity, red on a fault. On by default here, the leds are the point of this fork. Comment it out for a build without the LEDs; the CEB/CS2 pull-ups stay either way (see docs/LEDS.md).
   # ENABLE_PREVENT_DSI_AUTOBOOT # meant to be used with WRFU, doesn't work properly on the 3ds
 )
 

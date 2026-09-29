@@ -218,13 +218,20 @@ nothing to tune for the red LED: it fires on a condition, not a threshold.
 - **This is not official DSpico firmware.** Do not report problems with it to the
   LNH team. Open an issue on this fork instead.
 - It has been tested on **four boards**: mine, on a DS Lite, a 3DS with CFW and a
-  New 3DS without, and three more from people who tried the build. The pinout it
+  New 3DS without, and three more from people who tried an earlier build. The
+  28 September changes have only been tried on mine so far. The pinout it
   relies on is documented by the LNH team.
 - It drives GPIO27 and GPIO28 as outputs at 2 mA. If your board has anything else
   wired to those pins, do not flash this.
 - `src/sd/SdCard.cpp` gains one counter increment in each of the two functions
   that start a transfer, and the include that declares them. That is the whole of
   the change to the SD path; `SdCard.h` is untouched.
+- One change is not about the LEDs: `CEB` and `CS2`, the two card selects, are
+  pulled up instead of left floating, as the upstream firmware had them until
+  `913185e` disabled its pulls. A console drives both lines, so inside one the
+  card works the same. On USB power outside a console, a finger resting on the
+  contacts no longer wakes the firmware; putting it down or lifting it still can,
+  for a moment.
 - As with the upstream firmware, this is provided as-is under the
   [zlib license](../LICENSE.txt), without warranty of any kind.
 
@@ -237,4 +244,6 @@ fixes that came out of reviewing all of it before publishing.
 28 September 2026: the boot mount no longer lights blue. An earlier version of
 this page said the flicker outside a console was SD reads started by noise on
 the bus; a build that only leaves the boot mount out stays dark under the same
-finger, so it was the LED's own hold and not the card.
+finger, so it was the LED's own hold and not the card. The same day the two card
+selects went back to being pulled up. Together, the two changes were tested on
+my board only, in a DS Lite, a 3DS with CFW and a New 3DS without CFW.

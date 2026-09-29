@@ -62,8 +62,8 @@ void ledPrepareForSleep(void);
 
 #else
 
-// Every call site stays as it is and compiles to nothing, so a build without the
-// flag behaves exactly as it did before - see the note in CMakeLists.txt.
+// Every call site stays as it is and compiles to nothing, so without the flag
+// the LED code adds nothing to the build - see the note in CMakeLists.txt.
 static inline void ledNotifySdRead(void) { }
 static inline void ledNotifySdWrite(void) { }
 static inline void ledInit(void) { }
